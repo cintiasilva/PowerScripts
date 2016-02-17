@@ -1,0 +1,63 @@
+$program = "Trend Micro"
+$global:IP = "192.168."
+$global:log = "C:\Reboot-$vlan-$start-$end.log"
+
+
+function PingCheck{
+    try{
+        if(Test-Connection -Cn $computer -BufferSize 16 -Count 1 -ea 0 -quiet){
+            "PASS: Ping" 
+            logon
+            }
+            else{
+            "FAIL: Ping" 
+            
+            }
+        }
+        catch{
+            "FAIL: Ping" 
+           
+          }
+            write-host "PC" 
+}
+
+
+function logon{
+    try{
+     if (Test-Path "\\$computer\C$"){
+        
+        if(((Get-ChildItem "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall") | Where-Object { $_.GetValue( "DisplayName" ) -like "*$program*" } ).Length -gt 0){
+            write-host $computer + $program 'is Installed'
+        }
+        else{
+            write-host $computer $program 'is not Found'
+        }
+     }
+     
+    }
+    catch{
+        "fail fetch" 
+        write-host $computer 'Not able to fetch'
+    }
+} 
+
+
+
+function getvar{
+[int]$global:vlan = read-host "Which VLAN should i run on"
+[int]$global:start = read-host "Which IP should i start at?"
+[int]$global:end = read-host "Where to stop?"
+
+} 
+
+
+#Actual code that runs on start
+getvar
+do{
+    $global:computer = $IP + $vlan + "." + $start
+    "=========================$computer=========================" | add-content $log
+    write-host $computer
+    pingcheck
+        $start++
+}until ($start -eq $end)
+pause
