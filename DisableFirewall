@@ -1,0 +1,75 @@
+
+$global:IP = "192.168."
+$global:log = "C:\Reboot-$vlan-$start-$end.log"
+
+
+function PingCheck{
+    try{
+        if(Test-Connection -Cn $computer -BufferSize 16 -Count 1 -ea 0 -quiet){
+            "PASS: Ping" | add-content $log
+            logon
+            }
+            else{
+            "FAIL: Ping" | add-content $log
+            }
+        }
+        catch{
+            "FAIL: Ping" | add-content $log
+          }
+            write-host "PC" | add-content $log
+}
+
+
+function logon{
+    try{
+     if (Test-Path "\\$computer\C$"){
+        $sOS = Get-WmiObject -class Win32_OperatingSystem -computername $computer
+        $OS = $sOS.caption
+        #if not a server
+        if ($OS -notlike "*Server*"){
+            #check firewall status
+	        $firewallstatus = netsh advfirewall show currentprofile state
+	        if($firewallstatus -like '*ON*'){
+                Write-Host 'windows firewall is ON'
+        
+                #set firewall off if ON
+                netsh advfirewall set allprofiles state OFF
+                $firewallstatus = netsh advfirewall show currentprofile state
+                #check to see if firewall was disabled correctly
+	            if($firewallstatus -like '*OFF*'){
+                   Write-Host $computer 'windows firewall has been turned OFF'
+                }
+        
+            }
+	        elseif($firewallstatus -like '*OFF*'){
+                 Write-Host 'windows firewall is OFF'
+            }
+        }
+     }
+     else{
+        Write-Host "Detected SERVER OS"
+     }
+    }
+    catch{
+        "fail fetch" | add-content $log
+    }
+} 
+
+function getvar{
+[int]$global:vlan = read-host "Which VLAN should i run on"
+[int]$global:start = read-host "Which IP should i start at?"
+[int]$global:end = read-host "Where to stop?"
+
+} 
+
+
+#Actual code that runs on start
+getvar
+do{
+    $global:computer = $IP + $vlan + "." + $start
+    "=========================$computer=========================" | add-content $log
+    write-host $computer
+    pingcheck
+        $start++
+}until ($start -eq $end)
+pause
