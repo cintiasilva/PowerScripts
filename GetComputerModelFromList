@@ -1,0 +1,72 @@
+#Create a new Excel object using COM
+$Excel = New-Object -ComObject Excel.Application
+$Excel.visible = $True
+$Excel.SheetsInNewWorkbook = @(get-content "C:\Servers.txt").count
+
+#Counter variable for rows
+    $Excel = $Excel.Workbooks.Add()
+    $Sheet = $Excel.Worksheets.Item(1)
+    $Sheet.Name = "Computer Models"
+
+    $intRow = 1
+
+    $Sheet.Cells.Item($intRow,1) = "IP ADDRESS"
+    $Sheet.Cells.Item($intRow,2) = "COMPUTER"
+    $Sheet.Cells.Item($intRow,3) = "MODEL"
+
+    #Format the column headers
+    for ($col = 1; $col –le 3; $col++){
+        $Sheet.Cells.Item($intRow,$col).Font.Bold = $True
+    }
+    $intRow++
+$ipTotal = 0
+$ipContacted = 0
+#Read thru the contents of the ComputerList3.txt file
+foreach ($computer in get-content "C:\Servers.txt"){
+
+    $ipTotal ++
+
+    $ping = Get-WmiObject `
+    -query "SELECT * FROM Win32_PingStatus WHERE Address = '$computer'"
+
+     if ($ping.StatusCode -eq 0) {
+        $CompOS= Get-WmiObject -Class Win32_OperatingSystem -Computername $computer
+        $OS = $compOS.caption
+        #if not a server
+        if ($OS -notlike "*Server*"){
+            $properties = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $computer
+            #Formatting using Excel
+            foreach ($item in $properties){
+                $Sheet.Cells.Item($intRow, 1) = $computer
+                $Sheet.Cells.Item($intRow, 2) = $item.Name
+                $Sheet.Cells.Item($intRow, 3) = $item.Model
+                $ipContacted ++ 
+                $intRow ++
+                         
+             }
+        }
+        #if a server
+        elseif($OS -like "*Server*"){
+            foreach ($item in $properties){
+                $Sheet.Cells.Item($intRow, 1) = $computer
+                $Sheet.Cells.Item($intRow, 2) = $item.Name
+                $Sheet.Cells.Item($intRow, 3) = "SERVER"
+                $ipContacted ++
+                $intRow ++
+             
+            }
+
+        }
+    }
+    elseif($ping.StatusCode -ne 0){
+        foreach ($item in $compproperties){
+            $Sheet.Cells.Item($intRow, 1) = $computer
+            $Sheet.Cells.Item($intRow, 2) = $item.Name
+            $Sheet.Cells.Item($intRow, 3) = "Error Connecting"
+            $intRow ++
+        }
+    }
+    
+}
+$Sheet.Cells.Item($intRow+1, 1) = "Total IP addresses on list $ipTotal"
+$Sheet.Cells.Item($intRow+2, 1) = "IP addresses sucessfully connected $ipContacted"
