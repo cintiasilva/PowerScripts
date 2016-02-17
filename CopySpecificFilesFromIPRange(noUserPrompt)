@@ -1,0 +1,42 @@
+#delete computerList if exists
+if (Test-Path "C:\ComputerNames.txt") {
+  Remove-Item "C:\ComputerNames.txt"
+}
+#create a new IP list
+for($i = 1; $i -le 256; $i++){
+$ip = "192.168.101."
+    if(Test-Connection 192.168.101.$i -Count 1 -Quiet){
+        #("192.168.101.{0}") -f $_ | add-content "C:\ComputerList.txt"}}
+        $computer = "$ip$i" 
+        $name = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $computer
+        $name.Name | add-content "C:\ComputerNames.txt"
+       
+    }
+}
+
+
+#Get list of comp names and copy req folders
+$names = get-content "C:\ComputerNames.txt"
+foreach($computer in $names){
+    Try{
+        if(test-path "\\$computer\c$"){
+
+            $sOS = Get-WmiObject -class Win32_OperatingSystem -computername $computer
+            $OS = $sOS.caption
+
+            #if not a server
+            if ($OS -notlike "*Server*"){
+                #create a folder if not existent
+                $destination = New-Item -ItemType Directory -Path C:\TTBACKUP\$computer\datfiles -Force
+                #copy from path and paste item on destination folder
+                Copy-Item -Path \\$computer\c$\tt\datfiles\* -Destination $destination -Recurse -force;
+                 
+            }else{
+                "$computer -- SERVER OS Detected" | add-content $log
+                 Write-Host "$computer --SERVER OS Detected--"
+            }
+        }
+    }catch{
+        "fail fetch" |  add-content $log
+    }
+}
