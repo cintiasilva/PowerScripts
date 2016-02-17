@@ -1,0 +1,44 @@
+          }
+            write-host "--PC--" | add-content $log
+}
+
+
+function logon{
+    try{
+        if (Test-Path "\\$computer\C$"){
+            $sOS = Get-WmiObject -class Win32_OperatingSystem -computername $computer
+            $OS = $sOS.caption
+            #if not a server
+            if ($OS -notlike "*Server*"){
+                #create a folder if not existent
+                $destination = New-Item -ItemType Directory -Path C:\TTBACKUP\$computer\datfiles -Force
+                #copy from path and paste item on destination folder
+                Copy-Item -Path \\$computer\c$\tt\datfiles\* -Destination $destination -Recurse -force;
+            }         
+        }else{
+            "SERVER OS Detected" | add-content $log
+             Write-Host "--SERVER OS Detected--"
+        }
+   
+    }catch{
+        "fail fetch" |  add-content $log
+    }
+} 
+
+
+#Prompt user at the beginning of program
+function getvar{
+    [int]$global:start = read-host "Which IP should i start at?"
+    [int]$global:end = read-host "Where to stop?"
+} 
+
+#Actual code that runs on start
+getvar
+do{
+    $global:computer = $IP + "." + $start
+    "=========================$computer=========================" | add-content $log
+    write-host $computer
+    pingcheck
+        $start++
+}until ($start -eq $end)
+pause
